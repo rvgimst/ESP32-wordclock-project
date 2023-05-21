@@ -114,45 +114,57 @@ void Display::_update(int animationSpeed, bool fadeToBlack)
 // Param: float luminance (0..1)
 //        0.0 = black, 0.25 is normal, 0.5 is bright
 void Display::_colorTestPixelStart(float luminance) {
-  // pick a random pixel
-  uint16_t pixel = random(_clockFace.pixelCount());
+  // The 4 corner pixels should always be animated (to support matching the
+  //  faceplate corner holes over the corner LEDs)
+  for (int i = 0; i < 4; i++) {
+    if (!_animations.IsAnimationActive(i)) {
+      _colorTestAnimatePixel(i, luminance);
+    }
+  }
+
+  // pick a random pixel from the rest of the pixels
+  uint16_t pixel = random(_clockFace.pixelCount() - 4) + 4;
 
   if (!_animations.IsAnimationActive(pixel)) {
-    // pick random time and random color
-    // we use HslColor object as it allows us to easily pick a color
-    // with the same saturation and luminance 
-    //  leds[pos] += CHSV( gHue + random8(64), 200, 255);
-
-    RgbColor startingRgbColor = RgbColor(HslColor(gHue++ / 255.0f, 1.0f, luminance));
-    // set this color as the original color in the BrightnessController
-    _brightnessController.setOriginalColor(startingRgbColor);
-    // update brightness according to lightsensor value
-    _brightnessController.loop();
-    //  set that as the startingColor
-    _pixels.SetPixelColor(pixel, _brightnessController.getCorrectedColor());
-    _pixels.Show();
-
-    // fade to black
-    uint16_t time = random(170, 210); // time in centiseconds!! See Display::Display()
-    animationState[pixel].StartingColor = _pixels.GetPixelColor(pixel);
-    animationState[pixel].EndingColor = RgbColor(0);
-
-    AnimUpdateCallback blendAnimUpdate = [=](const AnimationParam &param) {
-      // this gets called for each animation on every time step
-      // progress will start at 0.0 and end at 1.0
-      // we use the blend function on the RgbColor to mix
-      // color based on the progress given to us in the animation
-      RgbColor updatedColor = RgbColor::LinearBlend(
-          animationState[param.index].StartingColor,
-          animationState[param.index].EndingColor,
-          param.progress);
-
-      // apply the color to the pixel
-      _pixels.SetPixelColor(param.index, updatedColor);
-    };
-
-    _animations.StartAnimation(pixel, time, blendAnimUpdate);
+    _colorTestAnimatePixel(pixel, luminance);
   }
+}
+
+// pick random time and random color to animate the given pixel
+void Display::_colorTestAnimatePixel(uint16_t pixel, float luminance) {
+  // we use HslColor object as it allows us to easily pick a color
+  // with the same saturation and luminance 
+  //  leds[pos] += CHSV( gHue + random8(64), 200, 255);
+
+  RgbColor startingRgbColor = RgbColor(HslColor(gHue++ / 255.0f, 1.0f, luminance));
+  // set this color as the original color in the BrightnessController
+  _brightnessController.setOriginalColor(startingRgbColor);
+  // update brightness according to lightsensor value
+  _brightnessController.loop();
+  //  set that as the startingColor
+  _pixels.SetPixelColor(pixel, _brightnessController.getCorrectedColor());
+  _pixels.Show();
+
+  // fade to black
+  uint16_t time = random(170, 210); // time in centiseconds!! See Display::Display()
+  animationState[pixel].StartingColor = _pixels.GetPixelColor(pixel);
+  animationState[pixel].EndingColor = RgbColor(0);
+
+  AnimUpdateCallback blendAnimUpdate = [=](const AnimationParam &param) {
+    // this gets called for each animation on every time step
+    // progress will start at 0.0 and end at 1.0
+    // we use the blend function on the RgbColor to mix
+    // color based on the progress given to us in the animation
+    RgbColor updatedColor = RgbColor::LinearBlend(
+        animationState[param.index].StartingColor,
+        animationState[param.index].EndingColor,
+        param.progress);
+
+    // apply the color to the pixel
+    _pixels.SetPixelColor(param.index, updatedColor);
+  };
+
+  _animations.StartAnimation(pixel, time, blendAnimUpdate);
 }
 
 void Display::_colorTestLoop() {

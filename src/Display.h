@@ -88,5 +88,6 @@ private:
   //void _blendAnimUpdate(const AnimationParam& param);
   void _blendAnimUpdate(const AnimationParam &param);
   void _colorTestPixelStart(float luminance = 0.2f);
+  void _colorTestAnimatePixel(uint16_t pixel, float luminance);
   void _colorTestLoop();
 };
