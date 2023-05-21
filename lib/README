@@ -44,3 +44,9 @@ libraries scanning project source files.
 
 More information about PlatformIO Library Dependency Finder
 - https://docs.platformio.org/page/librarymanager/ldf.html
+
+Library dependencies for wordclock (copied from gliktaras https://bitbucket.org/gliktaras/word-clock/src/master/):
+dependencies:
+	IotWebConf by Balazs Keleman (>= 2.3.0).
+	NeoPixelBus by Makuna (>= 2.5.3).
+	RTClib by Adafruit (>= 1.3.3).
