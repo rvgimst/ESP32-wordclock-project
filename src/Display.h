@@ -90,4 +90,5 @@ private:
   void _colorTestPixelStart(float luminance = 0.2f);
   void _colorTestAnimatePixel(uint16_t pixel, float luminance);
   void _colorTestLoop();
+  void _puzzleModeLoop();
 };

@@ -2,6 +2,19 @@
 
 #include <vector>
 
+// The number of LEDs connected before the start of the matrix.
+#define NEOPIXEL_SIGNALS 4
+
+// Matrix dimensions.
+#define NEOPIXEL_ROWS 11
+#define NEOPIXEL_COLUMNS 10
+
+// Number of LEDs on the whole strip.
+#define NEOPIXEL_COUNT (NEOPIXEL_ROWS * NEOPIXEL_COLUMNS + NEOPIXEL_SIGNALS)
+
+// max length of word to be found in the board
+#define PUZZLE_MAX_SEQUENCE 20
+
 class ClockFace
 {
 public:
@@ -27,6 +40,9 @@ public:
   // Returns the state of all LEDs as pixels. Updated when updateStateForTime()
   // is called.
   const std::vector<bool> &getState() { return _state; };
+
+  // public puzzle mode word finder function
+  void showLetterSequence(String str);
 
 protected:
   // Lights up a segment in the state.
@@ -57,12 +73,27 @@ protected:
 
   // Stores the bits of the clock that need to be turned on.
   std::vector<bool> _state;
+
+  //////////////////////////////////////////////////////////////////////////////////
+  // Declarations & defines for puzzle-mode where a sequence of letters is shown 
+  // with minimum distance between each consecutive letter
+  //////////////////////////////////////////////////////////////////////////////////
+  struct coord { // struct for storing a sequence of letters on the board
+    int x;
+    int y;
+  };
+
+  // 2D array of the letter-elements of the clock (top left == 0,0)
+  char _letters[NEOPIXEL_ROWS][NEOPIXEL_COLUMNS];
+
+  // recursive function to find best match for a word on the board
+  void findLetterSequence(String str, int *bestCost, coord *bestSolution, int *bestNumElems, int runningCost, coord *runningSolution, int runningNumElems);
 };
 
 class FrenchClockFace : public ClockFace
 {
 public:
-  FrenchClockFace(LightSensorPosition position) : ClockFace(position){};
+  FrenchClockFace(LightSensorPosition position);
 
   virtual bool stateForTime(int hour, int minute, int second, bool show_ampm);
 };
@@ -70,7 +101,7 @@ public:
 class EnglishClockFace : public ClockFace
 {
 public:
-  EnglishClockFace(LightSensorPosition position) : ClockFace(position){};
+  EnglishClockFace(LightSensorPosition position);
 
   virtual bool stateForTime(int hour, int minute, int second, bool show_ampm);
 };

@@ -21,6 +21,9 @@ void Display::loop()
     case ClockMode::COLOR_TEST:
       _colorTestLoop();
       break;
+    case ClockMode::PUZZLE_MODE:
+      _puzzleModeLoop();
+      break;
     case ClockMode::REAL_TIME:
     default:
       _updateClockRealTime();
@@ -185,4 +188,36 @@ void Display::_colorTestLoop() {
       _animations.UpdateAnimations();
       _pixels.Show();
   }
+}
+
+//======== Puzzle mode functions ========
+void Display::_puzzleModeLoop() {
+  if (Serial.available()) { // data incoming on the serial input
+    // NOTE on readString using Serial !!
+    // using VSCode's serial monitor imposes different behavior than when using the ArduinoIDEs serial monitor
+    // ArduinoIDE allows you to set linefeed(\r) and carriage return(\n) separately.
+    // When using ArduinoIDE serial monitor, set to "No line ending" for code below to work correclty
+    // The VSC monitor sends \r\n as part of the string to the code, which add 2 characters to the string
+    // So for now, use the ArduinoIDE's serial monitor to send strings to the code.
+    String str = Serial.readString(); // Serial.readString() or Serial.readStringUntil('\n');
+    str.trim();
+    str.toUpperCase();
+    if (str.length() > 0) {
+      Serial.printf("Display::_puzzleModeLoop(%s) len=%d\n", str, str.length());
+        
+      // String str = String("escape"); // for testing
+      _clockFace.showLetterSequence(str);
+      _update(30); // Update in 300 ms
+    }
+  }
+
+  // check if the brightness has changed and if so, 
+  // animate the change in brightness
+  _brightnessController.loop();
+  _animations.UpdateAnimations();
+  if (_brightnessController.hasChanged())
+  {
+    _update(30); // Update in 300 ms
+  }
+  _pixels.Show();
 }
