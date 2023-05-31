@@ -321,6 +321,38 @@ namespace {
 
 }  // namespace
 
+
+  // From IotWebConf.h:
+  // /**
+  //  * Create a parameter for the config portal.
+  //  *
+  //  *   @label - Displayable label at the config portal.
+  //  *   @id - Identifier used for HTTP queries and as configuration key. Must not contain spaces nor other special characters.
+  //  *   @valueBuffer - Configuration value will be loaded to this buffer from the EEPROM.
+  //  *   @length - The buffer should have a length provided here.
+  //  *   @type (optional, default="text") - The type of the html input field.
+  //  *       The type="password" has a special handling, as the value will be overwritten in the EEPROM
+  //  *       only if value was provided on the config portal. Because of this logic, "password" type field with
+  //  *       length more then IOTWEBCONF_PASSWORD_LEN characters are not supported.
+  //  *   @placeholder (optional) - Text appear in an empty input box.
+  //  *   @defaultValue (optional) - Value should be pre-filled if none was specified before.
+  //  *   @customHtml (optional) - The text of this parameter will be added into the HTML INPUT field.
+  //  */
+  // IotWebConfParameter(
+  //   const char* label, const char* id, char* valueBuffer, int length,
+  //   const char* type = "text", const char* placeholder = NULL,
+  //   const char* defaultValue = NULL, const char* customHtml = NULL,
+  //   boolean visible = true);
+
+  // /**
+  //  * Same as normal constructor, but config portal does not render a default
+  //  * input field for the item, instead uses the customHtml provided. Note the
+  //  * @type parameter description above!
+  //  */
+  // IotWebConfParameter(
+  //     const char* id, char* valueBuffer, int length, const char* customHtml,
+  //     const char* type = "text");
+
 IotConfig::IotConfig(Display* display)
   : web_server_(WEB_SERVER_PORT), display_(display),
     datetime_separator_("Date and time"),
@@ -369,6 +401,9 @@ IotConfig::IotConfig(Display* display)
     //   IOT_CONFIG_VALUE_LENGTH, "number", "30", "30",
     //   "pattern='\\d+' min='1' max='3600' "
     //   "style='max-width: 4em; display: block;'"),
+    find_word_param_(
+      "Find word", "find_word", find_word_value_,
+      IOT_CONFIG_VALUE_LENGTH, "text", "", ""),
     iot_web_conf_(THING_NAME, &dns_server_, &web_server_,
                   INITIAL_WIFI_AP_PASSWORD, CONFIG_VERSION)
 {
@@ -417,7 +452,8 @@ void IotConfig::updateClockFromParams_() {
   display_->setColor(parseColorValue(color_value_, RgbColor(239, 235, 216)));
   display_->setShowAmPm(static_cast<bool>(
                         parseNumberValue(show_ampm_value_, 0, 1, 0)));
-  display_->setSensorSensitivity(parseNumberValue(ldr_sensitivity_value_, 0, 10, 5));  
+  display_->setSensorSensitivity(parseNumberValue(ldr_sensitivity_value_, 0, 10, 5)); 
+  display_->setFindWord(find_word_value_, IOT_CONFIG_VALUE_LENGTH); 
 }
 
 void IotConfig::handleHttpToRoot_() {
@@ -525,6 +561,7 @@ void IotConfig::updateNTPLEDStatus_() {
 
   digitalWrite(NTP_STATUS_PIN, ntpPinHigh ? HIGH : LOW);
 }
+
 void IotConfig::setup() {
   Serial.println("=IotConfig::setup()");
   if (initialized_) {
@@ -554,6 +591,7 @@ void IotConfig::setup() {
 //  iot_web_conf_.addParameter(&period_param_);
   iot_web_conf_.addParameter(&test_separator_);
   iot_web_conf_.addParameter(&clock_mode_param_);
+  iot_web_conf_.addParameter(&find_word_param_);
   // iot_web_conf_.addParameter(&fast_time_factor_param_);
 
   iot_web_conf_.setConfigSavedCallback([this]() {

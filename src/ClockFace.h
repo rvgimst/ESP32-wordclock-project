@@ -42,7 +42,7 @@ public:
   const std::vector<bool> &getState() { return _state; };
 
   // public puzzle mode word finder function
-  void showLetterSequence(String str);
+  bool determineLetterSequence(String str, uint16_t *stateElems, int *nElems);
 
 protected:
   // Lights up a segment in the state.
@@ -84,10 +84,13 @@ protected:
   };
 
   // 2D array of the letter-elements of the clock (top left == 0,0)
-  char _letters[NEOPIXEL_ROWS][NEOPIXEL_COLUMNS];
+  char _letters[NEOPIXEL_COLUMNS][NEOPIXEL_ROWS];
 
   // recursive function to find best match for a word on the board
   void findLetterSequence(String str, int *bestCost, coord *bestSolution, int *bestNumElems, int runningCost, coord *runningSolution, int runningNumElems);
+
+  // check if coordinates (x,y) is in given coordinate list
+  bool coordInList(int x, int y, coord *coordList, int nElems);
 };
 
 class FrenchClockFace : public ClockFace

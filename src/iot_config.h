@@ -7,7 +7,7 @@
 #include <IotWebConf.h>
 
 // Maximum length of a single IoT configuration value.
-#define IOT_CONFIG_VALUE_LENGTH 16
+#define IOT_CONFIG_VALUE_LENGTH 32
 
 enum NTPState {NTP_Waiting, NTP_Connecting, NTP_Connected};
 
@@ -135,6 +135,11 @@ class IotConfig {
     IotWebConfParameter clock_mode_param_;
     // Clock mode parameter value.
     char clock_mode_value_[IOT_CONFIG_VALUE_LENGTH];
+
+    // Configuration portal's word param for puzzle mode
+    IotWebConfParameter find_word_param_;
+    // Find word parameter value
+    char find_word_value_[IOT_CONFIG_VALUE_LENGTH];
 
     // Configuration portal's fast time factor parameter definition.
     // IotWebConfParameter fast_time_factor_param_;

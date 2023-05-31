@@ -61,8 +61,11 @@ void ClockFace::updateSegment(int x, int y, int length)
     _state[map(i, y)] = true;
 }
 
-// Lit a sequence of letters on the board [PUBLIC]
-void ClockFace::showLetterSequence(String str)
+// Find a sequence of letters on the board [PUBLIC]
+// return value: whether or not a solution was found
+// input: word (string) to be found
+// output: the sequence of bits on the board corresponding to the input string (int[]), to be allocated by caller
+bool ClockFace::determineLetterSequence(String str, uint16_t *stateElems, int *nElems)
 {
   coord bestSolution[PUZZLE_MAX_SEQUENCE];
   coord runningSolution[PUZZLE_MAX_SEQUENCE];
@@ -71,32 +74,53 @@ void ClockFace::showLetterSequence(String str)
   int bestNumElems = 0;
   int runningNumElems = 0;
 
-  // Reset the board to all black
+  // print the board letters for debugging
+  // for (int x=0; x<NEOPIXEL_COLUMNS; x++) {
+  //   for (int y=0; y<NEOPIXEL_ROWS; y++) {
+  //     Serial.printf("%c ", _letters[x][y]);
+  //   }
+  //   Serial.printf("\n");
+  // }
+  
+  // Reset the state to all off/black. 
+  // We do this to make sure that -if Display:: calls _update...() the last know state is empty and no clock time is shown
   for (int i = 0; i < NEOPIXEL_COUNT; i++)
     _state[i] = false;
 
   findLetterSequence(str, &bestCost, bestSolution, &bestNumElems, runningCost, runningSolution, runningNumElems);
-  Serial.printf("ClockFace::showLetterSequence(%s) score:%d\n", str, bestCost);
+  Serial.printf("ClockFace::determineLetterSequence(%s) score:%d\n", str, bestCost);
 
   if (bestCost == 9999) { // no solution found
-    // light up the corner LEDs only
-    for (int i = 0; i < 4; i++) {
-      _state[i] = true;
-    }
+    return false;
+    // // light up the corner LEDs only
+    // for (int i = 0; i < 4; i++) {
+    //   _state[i] = true;
+    // }
   }
   else {
+    // light up the LEDs in the found solution
+    *nElems = bestNumElems;
     for (int i = 0; i < bestNumElems; i++) {
-      _state[map(bestSolution[i].y, bestSolution[i].x)] = true;
+      stateElems[i] = map(bestSolution[i].y, bestSolution[i].x);
+      // _state[map(bestSolution[i].y, bestSolution[i].x)] = true; // RVG: if we want to animate the letters one-by-one, we don't need the state
     }
+    return true;
   }
+}
+
+// Check if the given (x,y) coordinate is in the list of given coordinates
+bool ClockFace::coordInList(int x, int y, coord *coordList, int nElems)
+{
+  for (int i=0; i<nElems; i++) {
+    if (x == coordList[i].x && y == coordList[i].y) return true;
+  }
+  return false;
 }
 
 // Given a sequence of letters, find a solution with the shortest path between them.
 // NOTE: This is a recursive function
 // return value: sequence of coordinates that make up the given sequence
 void ClockFace::findLetterSequence(String str, int *bestCost, coord *bestSolution, int *bestNumElems, int runningCost, coord *runningSolution, int runningNumElems)
-// to add: prevCoord to indicate location of last letter
-//         currentCost
 {
   if (str == "") { // end of search (no more letters to search for in the word)
     // update best* params if current solution is better
@@ -129,10 +153,10 @@ void ClockFace::findLetterSequence(String str, int *bestCost, coord *bestSolutio
 
   str.remove(0, 1); // remove the first character from string so we can pass on the rest recursively
 
-  // go over the board and find all instances of our search character
-  for (int x=0; x<NEOPIXEL_ROWS; x++) {
-    for (int y=0; y<NEOPIXEL_COLUMNS; y++) {
-      if (_letters[x][y] == c) {
+  // go over the board and find all instances of our search character (if not used previously)
+  for (int x=0; x<NEOPIXEL_COLUMNS; x++) {
+    for (int y=0; y<NEOPIXEL_ROWS; y++) {
+      if (_letters[x][y] == c && !coordInList(x, y, runningSolution, runningNumElems)) {
         if (runningNumElems > 0) {
           // determine the distance between this letter and the previous (if any)
           dist = abs(x - lastCoord.x) + abs(y - lastCoord.y); // maybe make this a function later?
@@ -148,26 +172,7 @@ void ClockFace::findLetterSequence(String str, int *bestCost, coord *bestSolutio
       }
     } // continue to next letter on the board
   }
-
-  // ideas:
-  // use _letters[][] to access the board's letter Layout
-    
-  //   take the first letter L in str
-  //   for all L in _letters do
-  //   {
-  //     // determine distance D between prevcoord and L's coordinates on the board
-  //     if (currentCost + D > bestCost) break; // (next letter L since it won't get better, heuristic)
-  //     findLetterSequence(str-L, currentCost+D, bestCost, solution)
-  //   }
-
-  // TEST
-  // *bestCost = 10;
-  // for (int i = 0; i < str.length(); i++) {
-  //   bestSolution[i].x = i;
-  //   bestSolution[i].y = 0;
-  // }
 }
-
 
 //
 // Constants to match the ClockFace.
@@ -229,7 +234,18 @@ void ClockFace::findLetterSequence(String str, int *bestCost, coord *bestSolutio
 
 FrenchClockFace::FrenchClockFace(LightSensorPosition position) : ClockFace(position)
 {
-  strncpy(_letters[0], "ILbESTjDEUX", NEOPIXEL_ROWS);
+  // fill the array of letters. This is used for finding words in puzzle-mode
+  int i=0;
+  strncpy(_letters[i++], "ILBESTJDEUX", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "QUATRETROIS", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "NEUFUNESEPT", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "HUITSIXCINQ", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "MIDIXMINUIT", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "ONZEWHEURES", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "MOINSYLEDIX", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "ETTROISDEMI", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "VINGT-CINQK", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "QUARTSPILE!", NEOPIXEL_ROWS);
 }
 
 bool FrenchClockFace::stateForTime(int hour, int minute, int second, bool show_ampm)
@@ -449,16 +465,16 @@ EnglishClockFace::EnglishClockFace(LightSensorPosition position) : ClockFace(pos
 {
   // fill the array of letters. This is used for finding words in puzzle-mode
   int i=0;
-  strncpy(_letters[i++], "ITLISASAMPM", NEOPIXEL_COLUMNS);
-  strncpy(_letters[i++], "ACQUARTERDC", NEOPIXEL_COLUMNS);
-  strncpy(_letters[i++], "TWENTYFIVEX", NEOPIXEL_COLUMNS);
-  strncpy(_letters[i++], "HALFSTENJTO", NEOPIXEL_COLUMNS);
-  strncpy(_letters[i++], "PASTEBUNINE", NEOPIXEL_COLUMNS);
-  strncpy(_letters[i++], "ONESIXTHREE", NEOPIXEL_COLUMNS);
-  strncpy(_letters[i++], "FOURFIVETWO", NEOPIXEL_COLUMNS);
-  strncpy(_letters[i++], "EIGHTELEVEN", NEOPIXEL_COLUMNS);
-  strncpy(_letters[i++], "SEVENTWELVE", NEOPIXEL_COLUMNS);
-  strncpy(_letters[i++], "TENSZOCLOCK", NEOPIXEL_COLUMNS);
+  strncpy(_letters[i++], "ITLISASAMPM", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "ACQUARTERDC", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "TWENTYFIVEX", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "HALFSTENJTO", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "PASTEBUNINE", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "ONESIXTHREE", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "FOURFIVETWO", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "EIGHTELEVEN", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "SEVENTWELVE", NEOPIXEL_ROWS);
+  strncpy(_letters[i++], "TENSZOCLOCK", NEOPIXEL_ROWS);
 }
 
 bool EnglishClockFace::stateForTime(int hour, int minute, int second, bool show_ampm)
